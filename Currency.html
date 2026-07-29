@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exchange Desk — Currency Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-1:#0a0f1e;
+    --bg-2:#0f2f2b;
+    --bg-3:#0b1120;
+    --glass:rgba(255,255,255,0.06);
+    --glass-border:rgba(255,255,255,0.14);
+    --gold:#d4af37;
+    --gold-soft:#e8cd72;
+    --teal:#2dd4bf;
+    --teal-dim:#14b8a6;
+    --text-hi:#f4f6f5;
+    --text-lo:rgba(244,246,245,0.62);
+    --error:#f87171;
+    --success:#34d399;
+    --radius-lg:22px;
+    --radius-md:14px;
+    --radius-sm:9px;
+    --ease:cubic-bezier(.22,1,.36,1);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Space Grotesk',sans-serif;
+    color:var(--text-hi);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px 16px;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(45,212,191,0.16), transparent 45%),
+      radial-gradient(circle at 85% 78%, rgba(212,175,55,0.14), transparent 50%),
+      linear-gradient(160deg, var(--bg-1) 0%, var(--bg-3) 45%, var(--bg-2) 100%);
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  /* ambient orbs */
+  .orb{
+    position:fixed;
+    border-radius:50%;
+    filter:blur(60px);
+    opacity:0.35;
+    pointer-events:none;
+    z-index:0;
+    animation:drift 18s ease-in-out infinite;
+  }
+  .orb1{ width:320px;height:320px; background:var(--teal-dim); top:-80px; left:-100px; animation-delay:0s;}
+  .orb2{ width:260px;height:260px; background:var(--gold); bottom:-80px; right:-80px; animation-delay:4s;}
+  @keyframes drift{
+    0%,100%{ transform:translate(0,0) scale(1);}
+    50%{ transform:translate(30px,-25px) scale(1.08);}
+  }
+
+  .ticket-strip{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 118px,
+      rgba(255,255,255,0.025) 119px,
+      rgba(255,255,255,0.025) 120px
+    );
+    pointer-events:none;
+  }
+
+  .card{
+    position:relative;
+    z-index:1;
+    width:100%;
+    max-width:460px;
+    background:var(--glass);
+    border:1px solid var(--glass-border);
+    border-radius:var(--radius-lg);
+    backdrop-filter:blur(22px) saturate(140%);
+    -webkit-backdrop-filter:blur(22px) saturate(140%);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.35),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+    padding:32px 28px 28px;
+    animation:riseIn .7s var(--ease) both;
+  }
+  @keyframes riseIn{
+    from{ opacity:0; transform:translateY(24px) scale(.98);}
+    to{ opacity:1; transform:translateY(0) scale(1);}
+  }
+
+  .card-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    margin-bottom:22px;
+    gap:12px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--gold-soft);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:0 0 6px;
+  }
+  .eyebrow .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--teal);
+    box-shadow:0 0 8px var(--teal);
+    animation:pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:.35;}
+  }
+  h1{
+    font-size:22px;
+    font-weight:700;
+    margin:0;
+    letter-spacing:-.01em;
+  }
+  .rate-badge{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--text-lo);
+    text-align:right;
+    line-height:1.5;
+    white-space:nowrap;
+  }
+
+  label{
+    display:block;
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--text-lo);
+    margin:0 0 8px;
+  }
+
+  .field{
+    margin-bottom:16px;
+  }
+
+  .amount-wrap{
+    position:relative;
+  }
+  .amount-wrap input{
+    width:100%;
+    padding:14px 16px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:20px;
+    font-weight:600;
+    color:var(--text-hi);
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--glass-border);
+    border-radius:var(--radius-md);
+    outline:none;
+    transition:border-color .25s var(--ease), box-shadow .25s var(--ease), background .25s var(--ease);
+  }
+  .amount-wrap input::placeholder{ color:rgba(244,246,245,0.28); }
+  .amount-wrap input:focus{
+    border-color:var(--teal);
+    background:rgba(255,255,255,0.08);
+    box-shadow:0 0 0 4px rgba(45,212,191,0.15);
+  }
+  .amount-wrap input.invalid{
+    border-color:var(--error);
+    box-shadow:0 0 0 4px rgba(248,113,113,0.14);
+  }
+
+  .currency-row{
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    gap:10px;
+    align-items:end;
+    margin-bottom:6px;
+  }
+
+  .select-wrap{
+    position:relative;
+  }
+  .select-wrap select{
+    width:100%;
+    appearance:none;
+    -webkit-appearance:none;
+    padding:12px 34px 12px 14px;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:15px;
+    font-weight:500;
+    color:var(--text-hi);
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--glass-border);
+    border-radius:var(--radius-md);
+    outline:none;
+    cursor:pointer;
+    transition:border-color .25s var(--ease), background .25s var(--ease), transform .15s var(--ease);
+  }
+  .select-wrap select:hover{
+    border-color:rgba(255,255,255,0.3);
+    background:rgba(255,255,255,0.08);
+  }
+  .select-wrap select:focus{
+    border-color:var(--teal);
+    box-shadow:0 0 0 4px rgba(45,212,191,0.15);
+  }
+  .select-wrap::after{
+    content:'';
+    position:absolute;
+    right:13px;
+    top:50%;
+    width:8px;height:8px;
+    border-right:2px solid var(--text-lo);
+    border-bottom:2px solid var(--text-lo);
+    transform:translateY(-65%) rotate(45deg);
+    pointer-events:none;
+  }
+
+  .swap-btn{
+    width:42px;height:42px;
+    border-radius:50%;
+    border:1px solid var(--glass-border);
+    background:linear-gradient(145deg, rgba(45,212,191,0.18), rgba(212,175,55,0.14));
+    color:var(--text-hi);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:transform .35s var(--ease), background .25s var(--ease), border-color .25s var(--ease);
+    flex-shrink:0;
+  }
+  .swap-btn svg{ width:18px;height:18px; transition:transform .4s var(--ease); }
+  .swap-btn:hover{
+    border-color:var(--teal);
+    background:linear-gradient(145deg, rgba(45,212,191,0.3), rgba(212,175,55,0.2));
+  }
+  .swap-btn:active svg, .swap-btn.spin svg{
+    transform:rotate(180deg);
+  }
+
+  .error-msg{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12.5px;
+    color:var(--error);
+    background:rgba(248,113,113,0.1);
+    border:1px solid rgba(248,113,113,0.28);
+    border-radius:var(--radius-sm);
+    padding:9px 12px;
+    margin:2px 0 14px;
+    max-height:0;
+    opacity:0;
+    overflow:hidden;
+    transition:max-height .3s var(--ease), opacity .3s var(--ease), margin .3s var(--ease), padding .3s var(--ease);
+  }
+  .error-msg.show{
+    max-height:60px;
+    opacity:1;
+  }
+
+  .btn-row{
+    display:flex;
+    gap:10px;
+    margin-top:18px;
+  }
+  button.action{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:14.5px;
+    border:none;
+    border-radius:var(--radius-md);
+    padding:13px 18px;
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+    transition:transform .18s var(--ease), box-shadow .25s var(--ease), filter .2s var(--ease);
+  }
+  button.action:active{ transform:translateY(1px) scale(.98); }
+
+  .btn-convert{
+    flex:1;
+    color:#07211d;
+    background:linear-gradient(135deg, var(--teal) 0%, var(--gold-soft) 130%);
+    box-shadow:0 6px 20px rgba(45,212,191,0.25);
+  }
+  .btn-convert:hover{ filter:brightness(1.08); box-shadow:0 8px 26px rgba(45,212,191,0.35); }
+  .btn-convert:disabled{ opacity:.6; cursor:not-allowed; filter:none; }
+
+  .btn-reset{
+    color:var(--text-hi);
+    background:rgba(255,255,255,0.06);
+    border:1px solid var(--glass-border);
+  }
+  .btn-reset:hover{ background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.3); }
+
+  .spinner{
+    display:none;
+    width:16px;height:16px;
+    border:2px solid rgba(7,33,29,0.35);
+    border-top-color:#07211d;
+    border-radius:50%;
+    margin-right:8px;
+    vertical-align:-3px;
+    animation:spin .7s linear infinite;
+  }
+  .btn-convert.loading .spinner{ display:inline-block; }
+  .btn-convert.loading .btn-label{ opacity:.85; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* result / split-flap board */
+  .result-board{
+    margin-top:22px;
+    border-radius:var(--radius-md);
+    border:1px solid var(--glass-border);
+    background:linear-gradient(160deg, rgba(0,0,0,0.28), rgba(0,0,0,0.12));
+    padding:18px 18px 16px;
+    opacity:0;
+    transform:translateY(10px);
+    max-height:0;
+    overflow:hidden;
+    transition:opacity .45s var(--ease), transform .45s var(--ease), max-height .45s var(--ease), padding .45s var(--ease), margin .45s var(--ease);
+  }
+  .result-board.show{
+    opacity:1;
+    transform:translateY(0);
+    max-height:220px;
+    margin-top:22px;
+  }
+  .result-label{
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--text-lo);
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+  }
+  .flap-display{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:3px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .flap-symbol{
+    font-size:22px;
+    color:var(--gold-soft);
+    margin-right:4px;
+    font-weight:600;
+  }
+  .flap-tile{
+    width:26px;
+    height:38px;
+    background:linear-gradient(180deg, #1c2b29 0%, #0d1614 100%);
+    border-radius:4px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+    font-weight:700;
+    color:var(--teal);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 4px rgba(0,0,0,0.4);
+    position:relative;
+    overflow:hidden;
+  }
+  .flap-tile::after{
+    content:'';
+    position:absolute;
+    left:0;right:0;top:50%;
+    height:1px;
+    background:rgba(0,0,0,0.5);
+  }
+  .flap-tile.flip{
+    animation:flip .38s var(--ease);
+  }
+  @keyframes flip{
+    0%{ transform:rotateX(0deg); }
+    45%{ transform:rotateX(-90deg); }
+    46%{ transform:rotateX(90deg); }
+    100%{ transform:rotateX(0deg); }
+  }
+  .flap-tile.comma{
+    width:14px;
+    background:transparent;
+    box-shadow:none;
+    color:var(--text-lo);
+    font-size:16px;
+  }
+  .flap-tile.comma::after{ display:none; }
+
+  .rate-line{
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px dashed rgba(255,255,255,0.14);
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--text-lo);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .rate-line .live-tag{
+    color:var(--success);
+  }
+  .rate-line .stale-tag{
+    color:var(--gold-soft);
+  }
+
+  footer{
+    margin-top:18px;
+    text-align:center;
+    font-size:11px;
+    color:rgba(244,246,245,0.32);
+  }
+
+  /* responsive */
+  @media (max-width:480px){
+    .card{ padding:24px 18px 22px; }
+    h1{ font-size:19px; }
+    .currency-row{ grid-template-columns:1fr auto 1fr; gap:6px; }
+    .select-wrap select{ font-size:13.5px; padding:11px 26px 11px 10px; }
+    .swap-btn{ width:36px; height:36px; }
+    .flap-tile{ width:21px; height:32px; font-size:16px; }
+    .flap-symbol{ font-size:18px; }
+    .amount-wrap input{ font-size:17px; }
+    .btn-row{ flex-direction:column; }
+  }
+
+  @media (min-width:481px) and (max-width:768px){
+    .card{ max-width:420px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="ticket-strip"></div>
+
+<div class="card">
+  <div class="card-header">
+    <div>
+      <p class="eyebrow"><span class="dot"></span>Exchange Desk</p>
+      <h1>Currency Converter</h1>
+    </div>
+    <div class="rate-badge" id="clock">--:--:--</div>
+  </div>
+
+  <div class="field">
+    <label for="amount">Amount</label>
+    <div class="amount-wrap">
+      <input type="number" id="amount" placeholder="0.00" min="0" step="any" inputmode="decimal">
+    </div>
+  </div>
+
+  <div id="errorMsg" class="error-msg">
+    <span>⚠</span><span id="errorText">Please enter an amount greater than zero.</span>
+  </div>
+
+  <div class="currency-row">
+    <div class="field" style="margin-bottom:0;">
+      <label for="fromCurrency">From</label>
+      <div class="select-wrap">
+        <select id="fromCurrency"></select>
+      </div>
+    </div>
+
+    <button class="swap-btn" id="swapBtn" title="Swap currencies" aria-label="Swap currencies">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 7h11l-3-3M17 17H6l3 3"/>
+      </svg>
+    </button>
+
+    <div class="field" style="margin-bottom:0;">
+      <label for="toCurrency">To</label>
+      <div class="select-wrap">
+        <select id="toCurrency"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="action btn-convert" id="convertBtn">
+      <span class="spinner"></span><span class="btn-label">Convert</span>
+    </button>
+    <button class="action btn-reset" id="resetBtn">Reset</button>
+  </div>
+
+  <div class="result-board" id="resultBoard">
+    <div class="result-label">
+      <span>Converted Amount</span>
+      <span id="toCode">—</span>
+    </div>
+    <div class="flap-display" id="flapDisplay"></div>
+    <div class="rate-line">
+      <span id="rateText">1 USD = — </span>
+      <span id="sourceTag" class="live-tag">● live rates</span>
+    </div>
+  </div>
+
+  <footer>Rates refresh each session · for reference only, not financial advice</footer>
+</div>
+
+<script>
+(function(){
+  const CURRENCIES = [
+    {code:'USD', name:'US Dollar', flag:'🇺🇸'},
+    {code:'EUR', name:'Euro', flag:'🇪🇺'},
+    {code:'GBP', name:'British Pound', flag:'🇬🇧'},
+    {code:'JPY', name:'Japanese Yen', flag:'🇯🇵'},
+    {code:'INR', name:'Indian Rupee', flag:'🇮🇳'},
+    {code:'AUD', name:'Australian Dollar', flag:'🇦🇺'},
+    {code:'CAD', name:'Canadian Dollar', flag:'🇨🇦'},
+    {code:'CHF', name:'Swiss Franc', flag:'🇨🇭'},
+    {code:'CNY', name:'Chinese Yuan', flag:'🇨🇳'},
+    {code:'SGD', name:'Singapore Dollar', flag:'🇸🇬'},
+    {code:'AED', name:'UAE Dirham', flag:'🇦🇪'},
+    {code:'ZAR', name:'South African Rand', flag:'🇿🇦'}
+  ];
+
+  // Fallback static rates (approx, relative to USD = 1)
+  const FALLBACK_RATES = {
+    USD:1, EUR:0.92, GBP:0.79, JPY:156.2, INR:83.5, AUD:1.52,
+    CAD:1.37, CHF:0.90, CNY:7.24, SGD:1.35, AED:3.67, ZAR:18.4
+  };
+
+  let rates = null;
+  let ratesAreLive = false;
+
+  const amountEl = document.getElementById('amount');
+  const fromEl = document.getElementById('fromCurrency');
+  const toEl = document.getElementById('toCurrency');
+  const swapBtn = document.getElementById('swapBtn');
+  const convertBtn = document.getElementById('convertBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const errorMsg = document.getElementById('errorMsg');
+  const errorText = document.getElementById('errorText');
+  const resultBoard = document.getElementById('resultBoard');
+  const flapDisplay = document.getElementById('flapDisplay');
+  const rateText = document.getElementById('rateText');
+  const toCode = document.getElementById('toCode');
+  const sourceTag = document.getElementById('sourceTag');
+  const clockEl = document.getElementById('clock');
+
+  function populateSelects(){
+    CURRENCIES.forEach(c => {
+      const opt1 = document.createElement('option');
+      opt1.value = c.code;
+      opt1.textContent = `${c.flag} ${c.code} — ${c.name}`;
+      fromEl.appendChild(opt1);
+
+      const opt2 = document.createElement('option');
+      opt2.value = c.code;
+      opt2.textContent = `${c.flag} ${c.code} — ${c.name}`;
+      toEl.appendChild(opt2);
+    });
+    fromEl.value = 'USD';
+    toEl.value = 'INR';
+  }
+  populateSelects();
+
+  function updateClock(){
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  async function loadRates(){
+    try {
+      const res = await fetch('https://api.frankfurter.app/latest?from=USD');
+      if(!res.ok) throw new Error('bad response');
+      const data = await res.json();
+      rates = Object.assign({USD:1}, data.rates);
+      // ensure all our currencies exist, fall back per-code if missing
+      CURRENCIES.forEach(c => {
+        if (typeof rates[c.code] !== 'number') rates[c.code] = FALLBACK_RATES[c.code];
+      });
+      ratesAreLive = true;
+    } catch(e){
+      rates = Object.assign({}, FALLBACK_RATES);
+      ratesAreLive = false;
+    }
+  }
+
+  function showError(msg){
+    errorText.textContent = msg;
+    errorMsg.classList.add('show');
+    amountEl.classList.add('invalid');
+  }
+  function clearError(){
+    errorMsg.classList.remove('show');
+    amountEl.classList.remove('invalid');
+  }
+
+  amountEl.addEventListener('input', clearError);
+
+  function buildFlapTiles(formattedStr){
+    flapDisplay.innerHTML = '';
+    for(const ch of formattedStr){
+      const tile = document.createElement('div');
+      if(ch === ','){
+        tile.className = 'flap-tile comma';
+        tile.textContent = ',';
+      } else if (ch === '.') {
+        tile.className = 'flap-tile comma';
+        tile.textContent = '.';
+      } else {
+        tile.className = 'flap-tile flip';
+        tile.textContent = ch;
+      }
+      flapDisplay.appendChild(tile);
+    }
+  }
+
+  function formatNumber(n){
+    return n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  async function doConvert(){
+    clearError();
+    const raw = amountEl.value.trim();
+    const amount = parseFloat(raw);
+
+    if(raw === '' || isNaN(amount)){
+      showError('Please enter a valid numeric amount.');
+      resultBoard.classList.remove('show');
+      return;
+    }
+    if(amount <= 0){
+      showError('Amount must be greater than zero.');
+      resultBoard.classList.remove('show');
+      return;
+    }
+
+    const from = fromEl.value;
+    const to = toEl.value;
+
+    convertBtn.classList.add('loading');
+    convertBtn.disabled = true;
+
+    if(!rates){
+      await loadRates();
+    }
+
+    // small delay so loading animation is perceivable
+    await new Promise(r => setTimeout(r, 550));
+
+    const usdAmount = amount / rates[from];
+    const converted = usdAmount * rates[to];
+    const unitRate = rates[to] / rates[from];
+
+    const currencyMeta = CURRENCIES.find(c => c.code === to);
+    const flag = currencyMeta ? currencyMeta.flag : '';
+
+    buildFlapTiles(formatNumber(converted));
+    toCode.textContent = `${flag} ${to}`;
+    rateText.textContent = `1 ${from} = ${unitRate.toFixed(4)} ${to}`;
+
+    if(ratesAreLive){
+      sourceTag.textContent = '● live rates';
+      sourceTag.className = 'live-tag';
+    } else {
+      sourceTag.textContent = '● cached rates';
+      sourceTag.className = 'stale-tag';
+    }
+
+    resultBoard.classList.add('show');
+
+    convertBtn.classList.remove('loading');
+    convertBtn.disabled = false;
+  }
+
+  convertBtn.addEventListener('click', doConvert);
+
+  amountEl.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') doConvert();
+  });
+
+  swapBtn.addEventListener('click', () => {
+    const tmp = fromEl.value;
+    fromEl.value = toEl.value;
+    toEl.value = tmp;
+    swapBtn.classList.add('spin');
+    setTimeout(() => swapBtn.classList.remove('spin'), 400);
+    if(resultBoard.classList.contains('show')){
+      doConvert();
+    }
+  });
+
+  resetBtn.addEventListener('click', () => {
+    amountEl.value = '';
+    fromEl.value = 'USD';
+    toEl.value = 'INR';
+    clearError();
+    resultBoard.classList.remove('show');
+    amountEl.focus();
+  });
+
+  // preload rates in background
+  loadRates();
+})();
+</script>
+</body>
+</html>
